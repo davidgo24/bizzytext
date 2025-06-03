@@ -1,5 +1,3 @@
-# app/services/twilio_webhook.py
-
 from fastapi import APIRouter, Request
 from app.db.database import get_session
 from app.models.db_models import Owner, Client, Appointment
@@ -21,7 +19,7 @@ async def receive_sms(request: Request):
 
     session = get_session()
 
-    # Match Owner based on Twilio number (To)
+    # Match owner by the Twilio number (To field)
     statement = select(Owner).where(Owner.twilio_phone_number == to_number)
     owner = session.exec(statement).first()
 
@@ -30,12 +28,16 @@ async def receive_sms(request: Request):
 
     parsed = parse_owner_message(message_body)
 
-    # Check if client exists
+    # Lookup client by name + owner_id
     statement = select(Client).where(Client.name == parsed['client_name'], Client.owner_id == owner.id)
     client = session.exec(statement).first()
 
     if not client:
-        client = Client(name=parsed['client_name'], phone="unknown", owner_id=owner.id)
+        client = Client(
+            name=parsed['client_name'],
+            phone="unknown",
+            owner_id=owner.id
+        )
         session.add(client)
         session.commit()
         session.refresh(client)
@@ -49,13 +51,11 @@ async def receive_sms(request: Request):
     session.add(appointment)
     session.commit()
 
-    schedule_reminder(appointment_dt, client.phone)
-
+    # Optional: send confirmation SMS to owner’s personal phone
     confirmation_message = (
         f"✅ Appointment booked: {client.name} on {appointment_dt.strftime('%A %B %d at %I:%M %p')}."
     )
-
-    send_sms(owner.twilio_phone_number, confirmation_message)
+    send_sms(owner.personal_phone_number, confirmation_message)
 
     return {
         "status": "received",

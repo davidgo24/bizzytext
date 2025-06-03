@@ -19,46 +19,40 @@ async def receive_sms(request: Request):
 
     session = get_session()
 
-    # Match owner by the Twilio number (To field)
+    # Lookup Owner based on Twilio number (To)
     statement = select(Owner).where(Owner.twilio_phone_number == to_number)
     owner = session.exec(statement).first()
 
     if not owner:
         return {"status": "error", "message": "Owner not found"}
 
-    parsed = parse_owner_message(message_body)
+    # Route based on sender
+    if from_number == owner.personal_phone_number:
+        # Owner Message Flow (already works)
+        parsed = parse_owner_message(message_body)
 
-    # Lookup client by name + owner_id
-    statement = select(Client).where(Client.name == parsed['client_name'], Client.owner_id == owner.id)
-    client = session.exec(statement).first()
+        # Lookup or create Client logic (already works)
+        statement = select(Client).where(Client.name == parsed['client_name'], Client.owner_id == owner.id)
+        client = session.exec(statement).first()
 
-    if not client:
-        client = Client(
-            name=parsed['client_name'],
-            phone="unknown",
-            owner_id=owner.id
-        )
-        session.add(client)
+        if not client:
+            client = Client(name=parsed['client_name'], phone="unknown", owner_id=owner.id)
+            session.add(client)
+            session.commit()
+            session.refresh(client)
+
+        appointment_dt = datetime.fromisoformat(parsed['appointment_datetime'])
+        appointment = Appointment(client_id=client.id, appointment_datetime=appointment_dt, service_type=parsed['service_type'])
+        session.add(appointment)
         session.commit()
-        session.refresh(client)
 
-    appointment_dt = datetime.fromisoformat(parsed['appointment_datetime'])
-    appointment = Appointment(
-        client_id=client.id,
-        appointment_datetime=appointment_dt,
-        service_type=parsed['service_type']
-    )
-    session.add(appointment)
-    session.commit()
+        confirmation_message = f"✅ Appointment booked: {client.name} on {appointment_dt.strftime('%A %B %d at %I:%M %p')}."
+        send_sms(owner.personal_phone_number, confirmation_message)
 
-    # Optional: send confirmation SMS to owner’s personal phone
-    confirmation_message = (
-        f"✅ Appointment booked: {client.name} on {appointment_dt.strftime('%A %B %d at %I:%M %p')}."
-    )
-    send_sms(owner.personal_phone_number, confirmation_message)
+        return {"status": "received", "client": client.name, "appointment": appointment_dt.isoformat()}
 
-    return {
-        "status": "received",
-        "client": client.name,
-        "appointment": appointment.appointment_datetime.isoformat()
-    }
+    else:
+        # Client Message Flow (NEW)
+        print(f"Client message received: {from_number} said '{message_body}'")
+        send_sms(owner.personal_phone_number, f"Client texted: {message_body}")
+        return {"status": "received", "message": "Client message forwarded to owner"}

@@ -1,2 +1,6 @@
 .env
 .env_template
+*.env
+bizzytext.db
+__pycache__/
+venv/

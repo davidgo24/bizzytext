@@ -1,19 +1,15 @@
 from fastapi import FastAPI
-from sqlmodel import SQLModel, Session, create_engine
-import os
+from app.db.database import create_db_and_tables
+from app.services import twilio_webhook
 
-from app.models.db_models import Owner, Client, Appointment
-
-DATABASE_URL = "sqlite:///./bizzytext.db"
-engine = create_engine(DATABASE_URL, echo=True)
 
 app = FastAPI()
 
-# Create tables on startup
 @app.on_event("startup")
 def on_startup():
-    SQLModel.metadata.create_all(engine)
+    create_db_and_tables()
 
-@app.get("/")
-def read_root():
-    return {"message": "BizzyText SaaS is alive!"}
+
+app.include_router(twilio_webhook.router)
+
+

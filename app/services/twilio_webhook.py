@@ -1,3 +1,5 @@
+# app/services/twilio_webhook.py
+
 from fastapi import APIRouter, Request
 from app.db.database import get_session
 from app.models.db_models import Owner, Client, Appointment
@@ -13,46 +15,63 @@ router = APIRouter()
 @router.post("/twilio-webhook")
 async def receive_sms(request: Request):
     form = await request.form()
-    from_number = normalize_phone(form.get("From"))
-    to_number = normalize_phone(form.get("To"))
+    from_number = form.get("From")
+    to_number = form.get("To")
     message_body = form.get("Body")
 
     session = get_session()
 
-    # Lookup Owner based on Twilio number (To)
-    statement = select(Owner).where(Owner.twilio_phone_number == to_number)
+    # Normalize phone numbers
+    normalized_to = normalize_phone(to_number)
+    normalized_from = normalize_phone(from_number)
+
+    # Lookup Owner by Twilio number (To field)
+    statement = select(Owner).where(Owner.twilio_phone_number == normalized_to)
     owner = session.exec(statement).first()
 
     if not owner:
         return {"status": "error", "message": "Owner not found"}
 
-    # Route based on sender
-    if from_number == owner.personal_phone_number:
-        # Owner Message Flow (already works)
-        parsed = parse_owner_message(message_body)
+    # Handle client message
+    print(f"Client message received: {normalized_from} said '{message_body}'")
 
-        # Lookup or create Client logic (already works)
-        statement = select(Client).where(Client.name == parsed['client_name'], Client.owner_id == owner.id)
-        client = session.exec(statement).first()
+    parsed = parse_owner_message(message_body)
 
-        if not client:
-            client = Client(name=parsed['client_name'], phone="unknown", owner_id=owner.id)
-            session.add(client)
-            session.commit()
-            session.refresh(client)
+    # Lookup client by phone number under this owner
+    statement = select(Client).where(Client.phone == normalized_from, Client.owner_id == owner.id)
+    client = session.exec(statement).first()
 
+    if not client:
+        # fallback for missing client name
+        name = parsed['client_name'] if parsed['client_name'] else f"Client {normalized_from[-4:]}"
+        client = Client(name=name, phone=normalized_from, owner_id=owner.id)
+        session.add(client)
+        session.commit()
+        session.refresh(client)
+
+    # Schedule appointment if date was parsed
+    if parsed['appointment_datetime']:
         appointment_dt = datetime.fromisoformat(parsed['appointment_datetime'])
-        appointment = Appointment(client_id=client.id, appointment_datetime=appointment_dt, service_type=parsed['service_type'])
+        appointment = Appointment(
+            client_id=client.id,
+            appointment_datetime=appointment_dt,
+            service_type=parsed['service_type']
+        )
         session.add(appointment)
         session.commit()
 
-        confirmation_message = f"✅ Appointment booked: {client.name} on {appointment_dt.strftime('%A %B %d at %I:%M %p')}."
+        schedule_reminder(appointment_dt, client.phone)
+
+        confirmation_message = (
+            f"✅ Appointment booked: {client.name} on {appointment_dt.strftime('%A %B %d at %I:%M %p')}."
+        )
         send_sms(owner.personal_phone_number, confirmation_message)
-
-        return {"status": "received", "client": client.name, "appointment": appointment_dt.isoformat()}
-
     else:
-        # Client Message Flow (NEW)
-        print(f"Client message received: {from_number} said '{message_body}'")
-        send_sms(owner.personal_phone_number, f"Client texted: {message_body}")
-        return {"status": "received", "message": "Client message forwarded to owner"}
+        # fallback message when no appointment parsed
+        send_sms(owner.personal_phone_number, f"New message from {client.name}: '{message_body}'")
+
+    return {
+        "status": "received",
+        "client": client.name,
+        "owner": owner.name
+    }

@@ -19,6 +19,7 @@ def seed_owner():
         )
         session.add(owner)
         session.commit()
+        print("Luis Aka Boricutz (Owner) was seeded! ✅")
 
 if __name__ == "__main__":
     seed_owner()

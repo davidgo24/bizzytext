@@ -1,29 +1,23 @@
-from sqlmodel import SQLModel, create_engine, Session
+# app/db/database.py
+from sqlmodel import SQLModel, create_engine
 from dotenv import load_dotenv
+import os
+from sqlalchemy.orm import sessionmaker
 
 
-
-
-
+# Load environment variables from .env file
 load_dotenv(".env_template")
 
-DATABASE_URL = "sqlite:///bizzytext.db"
+# Pull DB URL from env
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL not set in environment")
+
+# Create the engine
 engine = create_engine(DATABASE_URL, echo=True)
 
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 def get_session():
-    return Session(engine)
-
-# ✅ paste your retry commit function here:
-def safe_commit(session, retries=5, delay=0.1):
-    for i in range(retries):
-        try:
-            session.commit()
-            return
-        except sqlite3.OperationalError as e:
-            if "database is locked" in str(e):
-                time.sleep(delay)
-            else:
-                raise
-    raise Exception("Database is locked after multiple retries")
-
-
+    return SessionLocal()

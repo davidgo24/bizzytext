@@ -32,7 +32,7 @@ class ConversationState(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     client_phone: str
     owner_id: int
-    client_name: Optional[str] = None
-    appointment_date: Optional[date] = None  # now proper date object
-    appointment_time: Optional[time] = None  # now proper time object
-    last_updated: Optional[datetime] = None
+    client_name: Optional[str]
+    appointment_date: Optional[date]  # now native
+    appointment_time: Optional[time]  # now native
+    last_updated: Optional[datetime]

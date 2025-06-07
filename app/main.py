@@ -1,15 +1,13 @@
 from fastapi import FastAPI
-from app.db.database import create_db_and_tables
+from app.db.database import engine
 from app.services import twilio_webhook
+from app.models import db_models
 
 
 app = FastAPI()
 
 @app.on_event("startup")
 def on_startup():
-    create_db_and_tables()
-
+    db_models.SQLModel.metadata.create_all(engine)
 
 app.include_router(twilio_webhook.router)
-
-

@@ -1,6 +1,8 @@
+sqlmodel
 fastapi
 uvicorn
-sqlmodel
+psycopg2-binary
+python-dateutil
 python-dotenv
 openai
-sqlite-utils
+twilio

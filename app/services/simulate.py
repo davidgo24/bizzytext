@@ -1,46 +1,51 @@
+# app/services/simulate.py
+
 import sys
-import requests
-import os
-from dotenv import load_dotenv
+from app.db.database import get_session
+from app.models.db_models import Owner, Client, ConversationState
+from app.services.ai_parser import parse_message, parse_owner_message
+from app.services.client_conversation import handle_client_message
+from app.services.owner_conversation import handle_owner_message
+from app.utils.phone_utils import normalize_phone
 
-# Load env vars so we can grab LOCAL_WEBHOOK_URL
-load_dotenv()
+session = get_session()
 
-# Your local webhook endpoint
-URL = os.getenv("LOCAL_WEBHOOK_URL", "http://localhost:8000/twilio-webhook")
-
-# Parse args
-if len(sys.argv) != 3:
-    print("Usage: python simulate.py {client|owner} 'message'")
+if len(sys.argv) < 3:
+    print("Usage: simulate.py [client|owner] [message]")
     sys.exit(1)
 
 who = sys.argv[1]
 message = sys.argv[2]
 
-# 👇 Sync with your real DB records:
-OWNER_PHONE = "+16264665679"  # ✅ Your real personal_phone_number from DB
-CLIENT_PHONE = "+15551234567"  # ✅ Use this for client test
+owner = session.query(Owner).first()
 
-# Define test numbers
 if who == "owner":
-    from_number = OWNER_PHONE
+    print("OWNER MESSAGE:")
+    parsed = parse_owner_message(message)
+    handle_owner_message(session, owner, parsed)
+
 elif who == "client":
-    from_number = CLIENT_PHONE
+    print("CLIENT MESSAGE:")
+    client_phone = "16265554444"  # Fake client test number
+    client = session.query(Client).filter(Client.phone == client_phone).first()
+
+    if not client:
+        client = Client(owner_id=owner.id, name="Unknown", phone=client_phone)
+        session.add(client)
+        session.commit()
+
+    state = session.query(ConversationState).filter(
+        ConversationState.client_phone == client_phone,
+        ConversationState.owner_id == owner.id
+    ).first()
+
+    if not state:
+        state = ConversationState(client_phone=client_phone, owner_id=owner.id)
+        session.add(state)
+        session.commit()
+
+    parsed = parse_message(message)
+    handle_client_message(session, owner, client, state, message, parsed)
+
 else:
-    print("Invalid role. Use 'client' or 'owner'")
-    sys.exit(1)
-
-# Always use your actual Twilio business number:
-TO_NUMBER = "+16265482282"  # ✅ Your real Twilio business number
-
-# Simulate webhook POST
-data = {
-    "From": from_number,
-    "To": TO_NUMBER,
-    "Body": message
-}
-
-resp = requests.post(URL, data=data)
-
-print(f"✅ Status: {resp.status_code}")
-print(resp.text)
+    print("Invalid argument.")

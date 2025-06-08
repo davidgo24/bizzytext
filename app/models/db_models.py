@@ -27,7 +27,6 @@ class Appointment(SQLModel, table=True):
     reminders_sent: Optional[str] = ""
     status: Optional[str] = "scheduled"
 
-# ✅ ConversationState Table (converted to SQLModel)
 class ConversationState(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     client_phone: str
@@ -36,3 +35,4 @@ class ConversationState(SQLModel, table=True):
     appointment_date: Optional[date]  # now native
     appointment_time: Optional[time]  # now native
     last_updated: Optional[datetime]
+    booking_complete: bool = Field(default=False)

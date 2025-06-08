@@ -1,8 +1,85 @@
 from fastapi import APIRouter, Request, Form, Response
+from app.db.database import get_session
+from app.models.db_models import Owner, Client, ConversationState
+from app.services.ai_parser import parse_message, parse_owner_message
+from app.services.client_conversation import handle_client_message
+from app.utils.phone_utils import normalize_phone
+
+router = APIRouter()
+
+@router.post("/twilio-webhook")
+async def receive_sms(
+    request: Request,
+    Body: str = Form(...),
+    From: str = Form(...),
+    To: str = Form(...)
+):
+    session = get_session()
+
+    print(f"📬 Incoming message from {From} to {To}: {Body}")
+
+    # Normalize
+    from_phone = normalize_phone(From)
+    to_phone = normalize_phone(To)
+
+    # Look up owner
+    owner = session.query(Owner).filter(
+        Owner.twilio_phone_number == to_phone
+    ).first()
+
+    if not owner:
+        print("⚠️ No owner found for this Twilio number.")
+        return Response(status_code=200)
+
+    # Owner message
+    if from_phone == normalize_phone(owner.personal_phone_number):
+        print("📬 Owner message received")
+        parsed = parse_owner_message(Body)
+        print(f"Owner parsed intent: {parsed}")
+        return Response(status_code=200)
+
+    # Client logic
+    client = session.query(Client).filter(
+        Client.phone == from_phone,
+        Client.owner_id == owner.id
+    ).first()
+
+    if not client:
+        client = Client(
+            owner_id=owner.id,
+            name="Unknown",
+            phone=from_phone
+        )
+        session.add(client)
+        session.commit()
+
+    # Load or create state
+    state = session.query(ConversationState).filter(
+        ConversationState.client_phone == from_phone,
+        ConversationState.owner_id == owner.id
+    ).first()
+
+    if not state:
+        state = ConversationState(
+            client_phone=from_phone,
+            owner_id=owner.id,
+            last_updated=datetime.utcnow()
+        )
+        session.add(state)
+        session.commit()
+
+    handle_client_message(session, owner, client, state, Body)
+
+    return Response(status_code=200)
+
+
+
+'''from fastapi import APIRouter, Request, Form, Response
 from fastapi.responses import PlainTextResponse
 from app.db.database import get_session
 from app.models.db_models import Owner, Client, Appointment, ConversationState
 from app.services.ai_parser import parse_message, parse_owner_message
+from app.services.client_conversation import handle_client_message
 from app.utils.phone_utils import normalize_phone
 from app.services.send_sms import send_sms
 from app.services.slot_generator import generate_slots_for_date
@@ -42,6 +119,10 @@ async def receive_sms(request: Request, Body: str = Form(...), From: str = Form(
 
     parsed = parse_message(Body)
     print(f"AI parsed intent: {parsed}")
+
+    
+    # Inside your webhook AFTER you detect client logic:
+    handle_client_message(owner, client, Body)
 
     # Load or create state
     state = session.query(ConversationState).filter(
@@ -101,3 +182,4 @@ async def receive_sms(request: Request, Body: str = Form(...), From: str = Form(
     send_sms(client_phone, "✅ Great! Your appointment has been booked. See you soon! If you need to reschedule, just text here.")
     send_sms(owner.personal_phone_number, f"New appointment: {client.name} → {appointment_datetime.strftime('%Y-%m-%d %I:%M %p')}")
     return Response(status_code=200)
+'''

@@ -3,6 +3,8 @@ from dateutil import parser as date_parser
 from app.services.scheduler import check_slot_availability, book_appointment, suggest_alternate_slots, client_has_appointment_on_date
 from app.services.send_sms import send_sms
 from app.services.offered_slots_state import save_offered_slots, get_offered_slots
+from app.services.date_normalizer import normalize_weekday_request
+
 
 
 
@@ -19,6 +21,8 @@ def handle_client_message(session, owner, client, state, body, parsed):
     if parsed.get("appointment_datetime"):
         requested_str = parsed["appointment_datetime"]
         requested_datetime = date_parser.parse(requested_str)
+        # Normalize
+        requested_datetime = normalize_weekday_request(requested_datetime)
 
         # If slot available → book immediately
         if check_slot_availability(owner.id, client.id, requested_datetime, session):

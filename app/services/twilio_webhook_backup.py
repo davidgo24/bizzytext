@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request
 from app.db.database import get_session
 from app.models.db_models import Owner, Client, Appointment
-from app.services.ai_parser import parse_message
+from app.services.ai_parser import parse_owner_message
 from app.services.scheduler import schedule_reminder
 from app.services.send_sms import send_sms
 from app.utils.phone_utils import normalize_phone

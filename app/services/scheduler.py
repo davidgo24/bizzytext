@@ -26,7 +26,10 @@ def book_appointment(session, owner, client, state, requested_datetime):
         service_type=None
     )
     session.add(appointment)
-    session.delete(state)
+    
+    if state:  # ✅ Only delete state if it exists
+        session.delete(state)
+
     session.commit()
     return appointment
 

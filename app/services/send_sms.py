@@ -1,6 +1,6 @@
+from twilio.rest import Client
 from dotenv import load_dotenv
 import os
-from twilio.rest import Client
 
 load_dotenv(".env_template")
 
@@ -14,7 +14,7 @@ LOCAL_SMS = os.getenv("LOCAL_SMS", "false").lower() == "true"
 
 def send_sms(to_phone, body):
     if LOCAL_SMS:
-        print(f"[SIMULATED SMS] To: {to_phone} | Body: {body}")
+        print(f"📩 Outbound simulated SMS → To: {to_phone} | Body: {body}")
         return
 
     client = Client(account_sid, auth_token)

@@ -1,0 +1,1 @@
+ALTER TABLE conversationstate ADD COLUMN offered_slots TEXT;

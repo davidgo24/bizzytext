@@ -36,3 +36,5 @@ class ConversationState(SQLModel, table=True):
     appointment_time: Optional[time]  # now native
     last_updated: Optional[datetime]
     booking_complete: bool = Field(default=False)
+    offered_slots: Optional[str]  # 👈 ADD THIS LINE
+

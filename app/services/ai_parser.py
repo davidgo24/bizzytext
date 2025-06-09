@@ -6,7 +6,7 @@ from app.utils.json_utils import safe_json_parse
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def parse_message(message: str) -> dict:
+def parse_client_message(message: str) -> dict:
     system_prompt = """
 You are BizzyText's AI assistant. Extract booking intent from client texts.
 

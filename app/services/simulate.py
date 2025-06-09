@@ -1,47 +1,36 @@
-import sys
-from app.db.database import get_session
-from app.models.db_models import Owner, Client, ConversationState
-from app.services.ai_parser import parse_message, parse_owner_message
+# app/services/simulate.py
+
 from app.services.client_conversation import handle_client_message
-from app.services.owner_conversation import handle_owner_message
+from app.services.ai_parser import parse_client_message
+from app.db.database import SessionLocal
+from app.models.db_models import Owner, Client, ConversationState
 from app.utils.phone_utils import normalize_phone
 
-session = get_session()
+import sys
 
-if len(sys.argv) < 3:
-    print("Usage: simulate.py [client|owner] [message]")
-    sys.exit(1)
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage: python simulate.py client <message>")
+        sys.exit(1)
 
-who = sys.argv[1]
-message = sys.argv[2]
+    entity = sys.argv[1]
+    message = sys.argv[2]
 
-owner = session.query(Owner).first()
+    session = SessionLocal()
 
-if who == "owner":
-    parsed = parse_owner_message(message)
-    handle_owner_message(session, owner, parsed)
+    if entity == "client":
+        owner = session.query(Owner).first()
+        client = session.query(Client).filter(Client.phone == normalize_phone("+16265554444")).first()
 
-elif who == "client":
-    client_phone = "16265554444"
-    client = session.query(Client).filter(Client.phone == client_phone).first()
+        state = (
+            session.query(ConversationState)
+            .filter(ConversationState.client_phone == client.phone, ConversationState.owner_id == owner.id)
+            .first()
+        )
 
-    if not client:
-        client = Client(owner_id=owner.id, name="Unknown", phone=client_phone)
-        session.add(client)
-        session.commit()
+        parsed = parse_client_message(message)
 
-    state = session.query(ConversationState).filter(
-        ConversationState.client_phone == client_phone,
-        ConversationState.owner_id == owner.id
-    ).first()
+        # ✅ ADD THIS LINE (log your input)
+        print(f"📨 Simulated incoming: \"{message}\"")
 
-    if not state:
-        state = ConversationState(client_phone=client_phone, owner_id=owner.id)
-        session.add(state)
-        session.commit()
-
-    parsed = parse_message(message)
-    handle_client_message(session, owner, client, state, message, parsed)
-
-else:
-    print("Invalid argument.")
+        handle_client_message(session, owner, client, state, message, parsed)

@@ -1,5 +1,3 @@
-# app/services/simulate.py
-
 import sys
 from app.db.database import get_session
 from app.models.db_models import Owner, Client, ConversationState
@@ -20,13 +18,11 @@ message = sys.argv[2]
 owner = session.query(Owner).first()
 
 if who == "owner":
-    print("OWNER MESSAGE:")
     parsed = parse_owner_message(message)
     handle_owner_message(session, owner, parsed)
 
 elif who == "client":
-    print("CLIENT MESSAGE:")
-    client_phone = "16265554444"  # Fake client test number
+    client_phone = "16265554444"
     client = session.query(Client).filter(Client.phone == client_phone).first()
 
     if not client:

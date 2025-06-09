@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Request, Form, Response
+from datetime import datetime
 from app.db.database import get_session
 from app.models.db_models import Owner, Client, ConversationState
 from app.services.ai_parser import parse_message, parse_owner_message
 from app.services.client_conversation import handle_client_message
+from app.services.owner_conversation import handle_owner_message
 from app.utils.phone_utils import normalize_phone
 
 router = APIRouter()
@@ -16,29 +18,21 @@ async def receive_sms(
 ):
     session = get_session()
 
-    print(f"📬 Incoming message from {From} to {To}: {Body}")
-
-    # Normalize
     from_phone = normalize_phone(From)
     to_phone = normalize_phone(To)
 
-    # Look up owner
     owner = session.query(Owner).filter(
         Owner.twilio_phone_number == to_phone
     ).first()
 
     if not owner:
-        print("⚠️ No owner found for this Twilio number.")
         return Response(status_code=200)
 
-    # Owner message
     if from_phone == normalize_phone(owner.personal_phone_number):
-        print("📬 Owner message received")
         parsed = parse_owner_message(Body)
-        print(f"Owner parsed intent: {parsed}")
+        handle_owner_message(session, owner, parsed)
         return Response(status_code=200)
 
-    # Client logic
     client = session.query(Client).filter(
         Client.phone == from_phone,
         Client.owner_id == owner.id
@@ -53,7 +47,6 @@ async def receive_sms(
         session.add(client)
         session.commit()
 
-    # Load or create state
     state = session.query(ConversationState).filter(
         ConversationState.client_phone == from_phone,
         ConversationState.owner_id == owner.id
@@ -68,7 +61,8 @@ async def receive_sms(
         session.add(state)
         session.commit()
 
-    handle_client_message(session, owner, client, state, Body)
+    parsed = parse_message(Body)
+    handle_client_message(session, owner, client, state, Body, parsed)
 
     return Response(status_code=200)
 

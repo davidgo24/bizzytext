@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime
 from dateutil import parser as date_parser
 from app.models.db_models import Appointment, ConversationState
 from app.utils.phone_utils import normalize_phone
@@ -12,20 +12,14 @@ def is_thank_you_message(body):
 def handle_client_message(session, owner, client, state, body, parsed):
     body = body.strip()
 
-    # ✅ Handle thank you logic
     if state.booking_complete and is_thank_you_message(body):
         print("Client sent thank you — no reply needed.")
         return
 
-    # ✅ Handle AI-parsed appointment intent
     if parsed.get("appointment_datetime"):
         requested_str = parsed["appointment_datetime"]
         requested_datetime = date_parser.parse(requested_str)
-        
-        if isinstance(requested_datetime, str):
-            requested_datetime = date_parser.parse(requested_datetime)
 
-        # Check if slot available
         if check_slot_availability(owner.id, client.id, requested_datetime, session):
             booked = book_appointment(session, owner, client, state, requested_datetime)
 
@@ -33,14 +27,12 @@ def handle_client_message(session, owner, client, state, body, parsed):
             send_sms(owner.personal_phone_number, f"📅 New appointment booked: {client.name or client.phone} - {booked.appointment_datetime.strftime('%A %I:%M %p')}")
             return
 
-        # Suggest alternatives if unavailable
-        alternatives = suggest_alternate_slots(owner.id, requested_datetime, session)
+        alternatives = suggest_alternate_slots(owner.id, client.id, requested_datetime, session)
         alt_text = ", ".join([dt.strftime("%A %I:%M %p") for dt in alternatives])
 
         send_sms(client.phone, f"Unfortunately {requested_datetime.strftime('%A %I:%M %p')} is not available. I do have: {alt_text}. Let me know if any of these work!")
         return
 
-    # ✅ Fallback — still missing info
     today = datetime.utcnow().date()
     slots = generate_slots_for_date(today)
     slot_str = ", ".join(slots[:3])

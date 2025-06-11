@@ -4,6 +4,9 @@ from sqlalchemy import func
 from app.models.db_models import Appointment
 from app.services.slot_generator_v2 import generate_slots_for_date
 from app.services.owner_schedule_service import get_owner_schedule_for_date
+from app.models.db_models import Appointment, Client
+
+
 
 SLOT_LENGTH_MINUTES = 60
 
@@ -19,17 +22,15 @@ def client_has_appointment_on_date(session, client_id, requested_datetime):
         func.date(Appointment.appointment_datetime) == requested_datetime.date()
     ).first() is not None
 
-def book_appointment(session, owner, client, state, requested_datetime):
+
+def book_appointment(session: Session, client: Client, owner_id: int, slot_dt: datetime) -> Appointment:
     appointment = Appointment(
         client_id=client.id,
-        appointment_datetime=requested_datetime,
-        service_type=None
+        owner_id=owner_id,
+        appointment_datetime=slot_dt,
+        status="scheduled"
     )
     session.add(appointment)
-    
-    if state:  # ✅ Only delete state if it exists
-        session.delete(state)
-
     session.commit()
     return appointment
 

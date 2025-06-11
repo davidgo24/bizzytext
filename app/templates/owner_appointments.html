@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Appointments</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+    <h2>📆 Upcoming Appointments for {{ owner_name }}</h2>
+
+    {% if appointments %}
+        <ul>
+        {% for appointment, client in appointments %}
+            <li>
+                {{ appointment.appointment_datetime.strftime('%A %B %d, %I:%M %p') }} — 
+                {{ client.name }} ({{ client.phone }})
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No upcoming appointments found.</p>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Availability Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+    <h2>📅 Your Weekly Availability</h2>
+
+    <ul>
+    {% for block in blocks %}
+        <li>
+            Day {{ block.day_of_week }} — {{ block.block_start.strftime('%I:%M %p') }} to {{ block.block_end.strftime('%I:%M %p') }}
+        </li>
+    {% endfor %}
+    </ul>
+
+    <h3>Add New Availability Block</h3>
+    <form method="post">
+        <label>Day (0=Mon...6=Sun):</label><br>
+        <input type="number" name="day_of_week" min="0" max="6"><br><br>
+
+        <label>Start Time:</label><br>
+        Hour: <input type="number" name="start_hour" min="0" max="23">
+        Minute: <input type="number" name="start_minute" min="0" max="59"><br><br>
+
+        <label>End Time:</label><br>
+        Hour: <input type="number" name="end_hour" min="0" max="23">
+        Minute: <input type="number" name="end_minute" min="0" max="59"><br><br>
+
+        <button type="submit">Add Availability</button>
+    </form>
+</body>
+</html>

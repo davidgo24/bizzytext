@@ -1,32 +1,33 @@
-from sqlmodel import Session, select
-from app.db.database import get_session
+from sqlmodel import Session
 from app.models.db_models import ConversationState
-from datetime import datetime
+from datetime import date, time
+from typing import Optional
+
 
 class ConversationStateManager:
-    def __init__(self):
-        self.session = get_session()
+    def __init__(self, db: Session):
+        self.db = db
 
-    def get_state(self, client_phone, owner_id):
-        stmt = select(ConversationState).where(
-            ConversationState.client_phone == client_phone,
-            ConversationState.owner_id == owner_id
-        )
-        result = self.session.exec(stmt).first()
-        return result
-
-    def create_or_update_state(self, client_phone, owner_id, client_name=None, appointment_date=None, appointment_time=None):
-        state = self.get_state(client_phone, owner_id)
+    def create_or_update_state(
+        self,
+        client_phone: str,
+        owner_id: int,
+        client_name: str,
+        appointment_date: date,
+        appointment_time: time,
+        booking_complete: Optional[bool] = None,
+    ):
+        state = self.db.query(ConversationState).filter_by(
+            client_phone=client_phone,
+            owner_id=owner_id
+        ).first()
 
         if state:
-            if client_name:
-                state.client_name = client_name
-            if appointment_date:
-                state.appointment_date = appointment_date
-            if appointment_time:
-                state.appointment_time = appointment_time
-            state.last_updated = datetime.now()
-            self.session.add(state)
+            state.client_name = client_name
+            state.appointment_date = appointment_date
+            state.appointment_time = appointment_time
+            if booking_complete is not None:
+                state.booking_complete = booking_complete
         else:
             state = ConversationState(
                 client_phone=client_phone,
@@ -34,15 +35,17 @@ class ConversationStateManager:
                 client_name=client_name,
                 appointment_date=appointment_date,
                 appointment_time=appointment_time,
-                last_updated=datetime.now()
+                booking_complete=booking_complete or False,
             )
-            self.session.add(state)
+            self.db.add(state)
 
-        self.session.commit()
-        return state
+        self.db.commit()
 
-    def clear_state(self, client_phone, owner_id):
-        state = self.get_state(client_phone, owner_id)
+    def clear_state(self, client_phone: str, owner_id: int):
+        state = self.db.query(ConversationState).filter_by(
+            client_phone=client_phone,
+            owner_id=owner_id
+        ).first()
         if state:
-            self.session.delete(state)
-            self.session.commit()
+            self.db.delete(state)
+            self.db.commit()

@@ -15,8 +15,11 @@ if not DATABASE_URL:
     raise Exception("DATABASE_URL not set in environment")
 
 # Create the engine
-engine = create_engine(DATABASE_URL, echo=True)
-
+engine = create_engine(
+    DATABASE_URL,
+    echo=True,
+    pool_pre_ping=True  # ✅ this checks connection health before each use
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_session():

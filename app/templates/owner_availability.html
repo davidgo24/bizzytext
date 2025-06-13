@@ -1,34 +1,100 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Availability Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>Owner Availability</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h2>📅 Your Weekly Availability</h2>
+<body class="bg-gray-100 py-8 px-4">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6 text-center">Your Availability</h1>
 
-    <ul>
-    {% for block in blocks %}
-        <li>
-            Day {{ block.day_of_week }} — {{ block.block_start.strftime('%I:%M %p') }} to {{ block.block_end.strftime('%I:%M %p') }}
-        </li>
-    {% endfor %}
-    </ul>
+    <div class="space-y-6">
+      {% for day_num in range(7) %}
+        {% set blocks_for_day = schedule_blocks | selectattr("day_of_week", "equalto", day_num) | list %}
+        {% if blocks_for_day %}
+          <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-center mb-2">
+              <h2 class="font-semibold text-lg">
+                {{ ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][day_num] }}
+              </h2>
+              <span class="text-sm text-gray-500">{{ blocks_for_day | length }} block{{ 's' if blocks_for_day | length > 1 }}</span>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              {% for block in blocks_for_day %}
+                <div class="bg-blue-50 text-sm text-blue-800 border border-blue-200 rounded-md px-3 py-2 flex items-center gap-2 shadow-sm">
+                  {{ block.block_start.strftime("%I:%M %p") }} – {{ block.block_end.strftime("%I:%M %p") }}
+                  <form action="/owner-availability/delete?token={{ token }}" method="post">
+                    <input type="hidden" name="block_id" value="{{ block.id }}">
+                    <button type="submit" class="text-red-600 hover:text-red-800 text-xs ml-2">✕</button>
+                  </form>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
 
-    <h3>Add New Availability Block</h3>
-    <form method="post">
-        <label>Day (0=Mon...6=Sun):</label><br>
-        <input type="number" name="day_of_week" min="0" max="6"><br><br>
+    <hr class="my-10">
 
-        <label>Start Time:</label><br>
-        Hour: <input type="number" name="start_hour" min="0" max="23">
-        Minute: <input type="number" name="start_minute" min="0" max="59"><br><br>
+    <h2 class="text-xl font-semibold mb-4 text-center">Add New Block</h2>
 
-        <label>End Time:</label><br>
-        Hour: <input type="number" name="end_hour" min="0" max="23">
-        Minute: <input type="number" name="end_minute" min="0" max="59"><br><br>
+    <form action="/owner-availability/add?token={{ token }}" method="post" class="bg-white p-6 rounded-xl shadow space-y-6">
 
-        <button type="submit">Add Availability</button>
+      <div>
+        <label class="block font-semibold mb-1">Day of Week</label>
+        <select name="day_of_week" class="w-full p-2 border rounded-md">
+          {% for day in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] %}
+            <option value="{{ loop.index0 }}">{{ day }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Start Time</label>
+        <div class="grid grid-cols-3 gap-2">
+          <select name="start_hour" class="p-2 border rounded-md">
+            {% for h in range(1, 13) %}
+              <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+            {% endfor %}
+          </select>
+          <select name="start_minute" class="p-2 border rounded-md">
+            {% for m in ["00", "15", "30", "45"] %}
+              <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+          <select name="start_am_pm" class="p-2 border rounded-md">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">End Time</label>
+        <div class="grid grid-cols-3 gap-2">
+          <select name="end_hour" class="p-2 border rounded-md">
+            {% for h in range(1, 13) %}
+              <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+            {% endfor %}
+          </select>
+          <select name="end_minute" class="p-2 border rounded-md">
+            {% for m in ["00", "15", "30", "45"] %}
+              <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+          <select name="end_am_pm" class="p-2 border rounded-md">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">
+        Add Availability
+      </button>
     </form>
+  </div>
 </body>
 </html>

@@ -7,7 +7,7 @@ CUTOFF_MINUTES = 30
 
 def generate_slots_for_date(owner_id, target_date, session):
     print(f"🔍 Generating slots for {target_date}")
-    slots = []
+    slot_datetimes = []
 
     blocks = get_owner_schedule_for_date(owner_id, target_date, session)
     print(f"📅 Schedule blocks for {target_date}: {blocks}")
@@ -31,10 +31,13 @@ def generate_slots_for_date(owner_id, target_date, session):
             ).first()
 
             if not conflict:
-                formatted = current_slot.strftime("%I:%M %p")
-                slots.append(formatted)
+                slot_datetimes.append(current_slot)
 
             current_slot += timedelta(minutes=SLOT_LENGTH_MINUTES)
 
-    print(f"✅ Final slots for {target_date}: {slots}")
-    return slots
+    # ✅ Sort slots by time, then format
+    slot_datetimes.sort()
+    formatted_slots = [dt.strftime("%I:%M %p") for dt in slot_datetimes]
+
+    print(f"✅ Final slots for {target_date}: {formatted_slots}")
+    return formatted_slots

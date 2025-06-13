@@ -1,4 +1,5 @@
 from datetime import datetime
+import pytz
 
-def format_human_date(dt: datetime) -> str:
-    return dt.strftime("%A at %-I:%M %p")  # e.g. "Friday at 2:00 PM"
+def to_utc(pacific_dt: datetime) -> datetime:
+    return pacific_dt.astimezone(pytz.utc)

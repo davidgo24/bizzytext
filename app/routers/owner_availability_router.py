@@ -38,13 +38,20 @@ def add_block(
     end_hour: int = Form(...),
     end_minute: int = Form(...),
     end_am_pm: str = Form(...),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
+    from datetime import time, date, datetime
+
+    owner = get_owner_by_token(token, session)
+    if not owner:
+        return templates.TemplateResponse("error.html", {"request": request, "error": "Invalid token."})
+
     # Convert to 24-hour time
     if start_am_pm == "PM" and start_hour != 12:
         start_hour += 12
     if start_am_pm == "AM" and start_hour == 12:
         start_hour = 0
+
     if end_am_pm == "PM" and end_hour != 12:
         end_hour += 12
     if end_am_pm == "AM" and end_hour == 12:
@@ -53,26 +60,17 @@ def add_block(
     start = time(start_hour, start_minute)
     end = time(end_hour, end_minute)
 
-    # ✅ Validation: prevent same start and end time
+    # 🚫 Prevent same-hour blocks
     if start == end:
-        return templates.TemplateResponse("error.html", {
+        blocks = session.query(OwnerScheduleBlock).filter_by(owner_id=owner.id).order_by(
+            OwnerScheduleBlock.day_of_week, OwnerScheduleBlock.block_start
+        ).all()
+        return templates.TemplateResponse("owner_availability.html", {
             "request": request,
+            "token": token,
+            "schedule_blocks": blocks,
             "error": "Start time and end time cannot be the same."
         })
-
-    # ✅ (Optional) prevent short blocks
-    from datetime import datetime, timedelta
-    start_dt = datetime.combine(date.today(), start)
-    end_dt = datetime.combine(date.today(), end)
-    if (end_dt - start_dt) < timedelta(minutes=60):  # assumes 60-min slots
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "error": "Time block must be at least 1 hour long."
-        })
-
-    owner = get_owner_by_token(token, session)
-    if not owner:
-        return templates.TemplateResponse("error.html", {"request": request, "error": "Invalid token."})
 
     block = OwnerScheduleBlock(
         owner_id=owner.id,
@@ -84,7 +82,6 @@ def add_block(
     session.commit()
 
     return RedirectResponse(f"/owner-availability?token={token}", status_code=303)
-
 
 @router.post("/owner-availability/delete", response_class=HTMLResponse)
 def delete_block(

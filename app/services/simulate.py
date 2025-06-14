@@ -20,17 +20,33 @@ if __name__ == "__main__":
 
     if entity == "client":
         owner = session.query(Owner).first()
-        client = session.query(Client).filter(Client.phone == normalize_phone("+16265554444")).first()
+        client_phone = normalize_phone("+6265555555")
 
-        state = (
-            session.query(ConversationState)
-            .filter(ConversationState.client_phone == client.phone, ConversationState.owner_id == owner.id)
-            .first()
-        )
+        # 🧠 Check for client (create if missing)
+        client = session.query(Client).filter(Client.phone == client_phone).first()
+        if not client:
+            client = Client(name="Sim User", phone=client_phone, owner_id=owner.id)
+            session.add(client)
+            session.commit()
+            print("👤 Created new simulated client.")
+
+        # 🧠 Check for state (create if missing)
+        state = session.query(ConversationState).filter(
+            ConversationState.client_phone == client.phone,
+            ConversationState.owner_id == owner.id
+        ).first()
+        if not state:
+            state = ConversationState(
+                client_phone=client.phone,
+                owner_id=owner.id,
+                client_name=client.name,
+                booking_complete=False
+            )
+            session.add(state)
+            session.commit()
+            print("🧠 Created new conversation state.")
 
         parsed = parse_client_message(message)
-
-        # ✅ ADD THIS LINE (log your input)
         print(f"📨 Simulated incoming: \"{message}\"")
 
         handle_client_message(session, owner, client, state, message, parsed)

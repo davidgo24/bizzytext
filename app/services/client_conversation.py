@@ -77,10 +77,20 @@ def get_booking_confidence(parsed):
 
 def handle_client_message(session, owner, client, state, body, parsed):
     body = body.strip()
+    print("🤖 handle_client_message invoked!")
+    print("📨 Client message:", body)
 
     # ✅ Handle thank you logic
     if state and state.booking_complete and is_thank_you_message(body):
         print("Client sent thank you — no reply needed.")
+        return
+
+    # ⛳️ NEW: Prompt if intent is 'book_appointment' but missing datetime
+    if parsed.get("intent") == "book_appointment" and not parsed.get("appointment_datetime"):
+        send_sms(
+            client.phone,
+            "Sure! What day and time work best for you? I can check my calendar and get you booked."
+        )
         return
 
     if parsed.get("appointment_datetime"):
@@ -164,18 +174,6 @@ def handle_client_message(session, owner, client, state, body, parsed):
     else:
         send_sms(client.phone, "I'm currently fully booked today. Feel free to check the full calendar for more options.")
 
-# NEW: helper to map weekday name to next date
-def get_next_weekday_date(target_weekday_str):
-    today = datetime.utcnow().date()
-    weekdays = list(calendar.day_name)
-    target_idx = weekdays.index(target_weekday_str.capitalize())
-    today_idx = today.weekday()
-
-    delta_days = (target_idx - today_idx + 7) % 7
-    if delta_days == 0:
-        delta_days = 7  # Always move forward if it's today
-
-    return today + timedelta(days=delta_days)
 
 
 # NEW: helper to get available times for a given date

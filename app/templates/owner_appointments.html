@@ -3,21 +3,61 @@
 <head>
     <title>Your Appointments</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 1rem;
+            background-color: #f8f9fa;
+        }
+        h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+        .date-header {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .appointment {
+            background-color: white;
+            padding: 0.75rem;
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .time {
+            font-weight: bold;
+            color: #444;
+        }
+        .client {
+            margin-top: 4px;
+            font-size: 0.95rem;
+        }
+        .phone {
+            font-size: 0.85rem;
+            color: #777;
+        }
+    </style>
 </head>
 <body>
-    <h2>📆 Upcoming Appointments for {{ owner_name }}</h2>
+    <h2>{{ owner_name }}'s Upcoming Appointments 📆</h2>
 
     {% if appointments %}
-        <ul>
-        {% for appointment, client in appointments %}
-            <li>
-                {{ appointment.appointment_datetime.strftime('%A %B %d, %I:%M %p') }} — 
-                {{ client.name }} ({{ client.phone }})
-            </li>
+    {% for date, daily_appts in appointments.items() %}
+        <div class="date-header">{{ date }}</div>
+        {% for appt in daily_appts %}
+            <div class="appointment">
+                <div class="time">{{ appt.time }}</div>
+                <div class="client">{{ appt.client_name }}</div>
+                {% if appt.phone %}
+                    <div class="phone">{{ appt.phone }}</div>
+                {% endif %}
+            </div>
         {% endfor %}
-        </ul>
-    {% else %}
-        <p>No upcoming appointments found.</p>
-    {% endif %}
-</body>
-</html>
+    {% endfor %}
+{% else %}
+    <p>No upcoming appointments found.</p>
+{% endif %}

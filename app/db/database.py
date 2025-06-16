@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 
 # Load environment variables from .env file
-load_dotenv(".env_template")
+load_dotenv(".env")
 
 # Pull DB URL from env
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -24,3 +24,4 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_session():
     return SessionLocal()
+

@@ -4,9 +4,20 @@ import json
 from openai import OpenAI
 from app.utils.json_utils import safe_json_parse
 
+
+print("📦 OPENAI_API_KEY loaded?", bool(os.getenv("OPENAI_API_KEY")))
+
+print("🧪 [ai_parser] FILE LOADED")
+
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+print("🔑 OpenAI client initialized:", client)
+
 
 def parse_client_message(message: str) -> dict:
+    print("🧪 ENTERED parse_client_message")
+    print("🧠 [ai_parser] Raw message to parse:", message)
+
     system_prompt = """
 You are BizzyText's AI assistant. Extract booking intent from client texts.
 
@@ -46,7 +57,11 @@ If you cannot extract something, set it to null. Only output valid JSON. Do NOT 
             "appointment_datetime": None,
             "service_type": None
         }
+
+    print("🧠 [ai_parser] Parsed output:", parsed)
     return parsed
+
+
 
 # --- Owner Message Parser ---
 def parse_owner_message(message: str) -> dict:

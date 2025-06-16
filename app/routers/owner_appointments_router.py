@@ -6,6 +6,7 @@ from app.db.database import get_session
 from app.models.db_models import Appointment, Client
 from app.utils.token_utils import get_owner_by_token
 from datetime import datetime
+from collections import defaultdict
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -25,8 +26,20 @@ def view_appointments(token: str, request: Request, session: Session = Depends(g
         .all()
     )
 
+    grouped = defaultdict(list)
+    for appt, client in appointments:
+        date_label = appt.appointment_datetime.strftime("%A, %B %d")
+        time_str = appt.appointment_datetime.strftime("%I:%M %p").lstrip("0")
+
+        grouped[date_label].append({
+            "time": time_str,
+            "client_name": client.name,
+            "phone": client.phone
+        })
+
+    # ✅ Ensure we're passing a dictionary, not a list
     return templates.TemplateResponse("owner_appointments.html", {
         "request": request,
-        "appointments": appointments,
+        "appointments": dict(grouped),
         "owner_name": owner.name
     })

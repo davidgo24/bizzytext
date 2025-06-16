@@ -6,7 +6,7 @@ from app.models.db_models import Appointment, Client, Owner
 from app.services.send_sms import send_sms
 from dotenv import load_dotenv
 
-load_dotenv(".env_template")
+load_dotenv(".env")
 
 def send_reminder(appointment_id: int):
     session = get_session()

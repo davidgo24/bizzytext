@@ -1,6 +1,7 @@
 import re
 
 def normalize_phone(phone: str) -> str:
+    print("📞 Raw phone input:", phone)
     # Remove all non-digit characters
     digits_only = re.sub(r"\D", "", phone)
 

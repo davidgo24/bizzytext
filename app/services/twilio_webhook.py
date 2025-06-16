@@ -21,26 +21,44 @@ async def receive_sms(
     from_phone = normalize_phone(From)
     to_phone = normalize_phone(To)
 
+    print("✅ /twilio-webhook POST received from:", from_phone, "| Body:", Body)
+
     owner = session.query(Owner).filter(
         Owner.twilio_phone_number == to_phone
     ).first()
 
     if not owner:
+        print("❌ No owner matched for Twilio number:", to_phone)
         return Response(status_code=200)
 
-    # Owner messages (internal)
+    print("🧑 Owner matched:", owner)
+
+    print("📞 Comparing from_phone vs owner.personal_phone_number...")
+    print("FROM:", from_phone)
+    print("OWNER PERSONAL:", normalize_phone(owner.personal_phone_number))
+
+    # OWNER messages
     if from_phone == normalize_phone(owner.personal_phone_number):
+        print("📨 Incoming message is from OWNER")
         parsed = parse_owner_message(Body)
         handle_owner_message(session, owner, parsed)
         return Response(status_code=200)
 
-    # Client messages (external)
+    # CLIENT messages
+    print("📨 Incoming message is from CLIENT")
+
+    print("🛠 About to parse client message...")
+    parsed = parse_client_message(Body)
+    print("🛠 Returned from client parser.")
+    print("🧠 Parsed message:", parsed)
+
     client = session.query(Client).filter(
         Client.phone == from_phone,
         Client.owner_id == owner.id
     ).first()
 
     if not client:
+        print("🆕 Creating new client record...")
         client = Client(
             owner_id=owner.id,
             name="Unknown",
@@ -55,6 +73,7 @@ async def receive_sms(
     ).first()
 
     if not state:
+        print("🧠 No state, creating new one...")
         state = ConversationState(
             client_phone=from_phone,
             owner_id=owner.id,
@@ -65,7 +84,7 @@ async def receive_sms(
         session.add(state)
         session.commit()
 
-    parsed = parse_client_message(Body)
+    print("📬 Calling handle_client_message...")
     handle_client_message(session, owner, client, state, Body, parsed)
 
     return Response(status_code=200)
